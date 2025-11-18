@@ -1,62 +1,50 @@
-require 'pry'
 require_relative './elements/elements_helper'
+require_relative './elements/elements_definer'
+require 'rspec-wait'
 
-module PageObject
-  class Page
-    include Capybara::DSL
-    include ElementsHelper
+# Defines page and block classes
+# @example
+#   class Footer < Block
+#     element :contact_us, '//a[@id="contact-us"]'
+#   end
+#
+#   class LoginPage < Page
+#     element :login, '//input[@id="login"]'
+#     element :password, '//input[@id="login"]'
+#     element :submit, '//input[@id="submit"]'
+#
+#     block :footer, Footer
+#
+#     def initialize
+#       super('Login Page')
+#       validate_presence :login, :password
+#     end
+#
+#     def login(creds)
+#       login.set(creds[:email])
+#       password.set(creds[:password])
+#       submit.click
+#     end
+#
+#     def go_to_contact_form
+#       footer.contact_us.click
+#     end
+#   end
+class Page
 
-    class << self
-      # Defines a new element
-      # @param [Symbol] name
-      # @param [String] path
-      # @!macro [name] element
-      def element(name, path)
-        define_method name do
-          retriable_find(name, path)
-        end
-      end
+  include Capybara::DSL
+  include ElementsHelper
+  extend ElementDefiner
 
-      # Defines a new elements_collection
-      # @param [Symbol] collection_name
-      # @param [String] path
-      # @!macro [name] elements
-      def elements(collection_name, path)
-        define_method collection_name do
-          retriable_all(collection_name, path)
-        end
-      end
-
-      # Defines a new block
-      # @param [Symbol] name
-      # @param [Class] clazz
-      # @!macro [name] block
-      def block(name, clazz, *args, &block)
-        define_method name do
-          clazz.new(args, &block)
-        end
-      end
-    end
-
-    def validate_presence(*elements)
-      missing_elements = []
-      elements.each do |element|
-        begin
-          send(element)
-        rescue Capybara::ElementNotFound => e
-          missing_elements << element
-        end
-      end
-      raise "Missing elements: #{missing_elements.join(', ')}" unless missing_elements.empty?
-    end
-
-    def initialize(page_name)
-      puts page_name
-    end
-  end
-
-  class Block < Page
+  def initialize(page_name:, log_init: true)
+    wait_for_ready_state(timeout: Capybara.default_max_wait_time)
+    log_step_with_screenshot "The page #{page_name} is successfully loaded" if log_init
   end
 end
 
-
+class Block < Page
+  def initialize(page_name:)
+    super(page_name: page_name, log_init: false)
+    log_step "The block #{page_name} is successfully loaded"
+  end
+end
