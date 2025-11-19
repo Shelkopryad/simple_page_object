@@ -33,6 +33,7 @@ RUN bundle install --jobs 4 --retry 3
 
 COPY config/ /app/config/
 COPY lib/ /app/lib/
+COPY helpers/ /app/helpers/
 COPY spec_helper.rb /app/
 
 RUN mkdir -p /app/reports/allure-results /app/reports/screenshots /app/downloads
