@@ -1,0 +1,87 @@
+version: '3'
+services:
+  simple_page_object:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: simple_page_object
+    image: simple_page_object:latest
+    volumes:
+      - .:/app
+      - ./spec:/app/spec
+      - ./reports/allure-results:/app/reports/allure-results
+    depends_on:
+      - redis_db
+    environment:
+      REDIS_HOST: redis://redis_db:6379
+      SELENOID_HOST: selenoid
+    tty: true
+    networks:
+      - spo_network
+
+  redis_db:
+    container_name: redis
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    networks:
+      - spo_network
+
+  teamcity-server:
+    image: jetbrains/teamcity-server
+    container_name: teamcity-server
+    ports:
+      - "8111:8111"
+    volumes:
+      - /home/teamcity_date:/data/teamcity_server/datadir
+      - /home/teamcity_logs:/opt/teamcity/logs
+    restart: unless-stopped
+
+  selenoid:
+    image: aerokube/selenoid:latest-release
+    container_name: selenoid
+    command:
+      - "-limit"
+      - "5"
+      - "-timeout"
+      - "10m"
+      - "-session-attempt-timeout"
+      - "2m"
+      - "-container-network"
+      - "simple_page_object"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "./config/:/etc/selenoid/"
+    environment:
+      - OVERRIDE_VIDEO_OUTPUT_DIR=/app/videos
+    ports:
+      - "4444:4444"
+    networks:
+      - spo_network
+
+  selenoid-ui:
+    image: aerokube/selenoid-ui:latest-release
+    container_name: selenoid-ui
+    depends_on:
+      - selenoid
+    ports:
+      - "8080:8080"
+    command: ["--selenoid-uri", "http://selenoid:4444"]
+    networks:
+      - spo_network
+
+  chrome_browser:
+    image: selenoid/chrome:128.0
+    container_name: chrome_selenoid
+    links:
+      - selenoid-ui
+      - selenoid
+    depends_on:
+      - selenoid
+      - selenoid-ui
+    networks:
+      - spo_network
+
+networks:
+  spo_network:
+    name: spo_network
