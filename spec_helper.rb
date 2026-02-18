@@ -15,14 +15,6 @@ def github_main_page
   'https://github.com/'
 end
 
-def ma_url
-  'https://staging-booth-my.artec3d.com'
-end
-
-def crm_url
-  'https://staging.arteccrm.com'
-end
-
 module PlaywrightDriver
   extend self
 
