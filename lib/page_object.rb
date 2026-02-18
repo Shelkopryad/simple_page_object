@@ -1,6 +1,6 @@
-require_relative './elements/elements_helper'
-require_relative './elements/elements_definer'
 require 'rspec-wait'
+require './spec_helper'
+require 'waitutil'
 
 # Defines page and block classes
 # @example
@@ -31,14 +31,58 @@ require 'rspec-wait'
 #     end
 #   end
 class Page
+  include AllureHelper
 
-  include Capybara::DSL
-  include ElementsHelper
-  extend ElementDefiner
+  def self.block(name, clazz, *args, &block)
+    define_method name do
+      clazz.new(*args, &block)
+    end
+  end
+
+  def self.element(name, path, type = :xpath)
+    define_method name do
+      native_page.locator(path)
+    end
+
+    define_path_method name, path
+  end
+
+  def self.elements(collection_name, path, type = :xpath)
+    define_method collection_name do
+      all(type, path)
+    end
+
+    define_path_method collection_name, path
+  end
+
+  def self.define_path_method(element_name, path)
+    define_method "#{element_name}_path" do
+      path
+    end
+  end
+
+  def validate_presence(*elements)
+    elements.each do |element|
+      puts "Checking #{element}"
+      WaitUtil.wait_for_condition(
+        "element #{send("#{element}_path")}",
+        timeout_sec: 10,
+        delay_sec: 0.1
+      ) {
+        native_page.locator(send("#{element}_path")).visible?
+      }
+    end
+  end
 
   def initialize(page_name:, log_init: true)
-    wait_for_ready_state(timeout: Capybara.default_max_wait_time)
+    wait_for_page_loaded
     log_step_with_screenshot "The page #{page_name} is successfully loaded" if log_init
+  end
+
+  def wait_for_page_loaded(timeout: 30_000)
+    native_page.wait_for_load_state(state: 'load', timeout: timeout) rescue nil
+    native_page.wait_for_load_state(state: 'domcontentloaded', timeout: timeout) rescue nil
+    native_page.wait_for_load_state(state: 'networkidle', timeout: timeout) rescue nil
   end
 end
 

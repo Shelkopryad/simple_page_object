@@ -18,7 +18,11 @@ RUN apt-get update -qq && \
         less \
         ssh-client \
         shared-mime-info \
+        curl \
+        gnupg \
     && \
+    curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+    apt-get install -yq nodejs && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
@@ -31,9 +35,13 @@ COPY Gemfile Gemfile.lock /app/
 
 RUN bundle install --jobs 4 --retry 3
 
-COPY config/ /app/config/
-COPY lib/ /app/lib/
+COPY package.json package-lock.json /app/
+
+RUN npm ci && \
+    npx playwright install --with-deps
+
 COPY helpers/ /app/helpers/
+COPY lib/ /app/lib/
 COPY spec_helper.rb /app/
 
 RUN mkdir -p /app/reports/allure-results /app/reports/screenshots /app/downloads
