@@ -62,15 +62,10 @@ class Page
   end
 
   def validate_presence(*elements)
-    elements.each do |element|
-      puts "Checking #{element}"
-      WaitUtil.wait_for_condition(
-        "element #{send("#{element}_path")}",
-        timeout_sec: 10,
-        delay_sec: 0.1
-      ) {
-        native_page.locator(send("#{element}_path")).visible?
-      }
+    elements.each do |el_name|
+      path = send("#{el_name}_path")
+      puts "Checking presence of: #{el_name}"
+      native_page.locator(path).wait_for(state: 'visible', timeout: 10_000)
     end
   end
 
@@ -80,9 +75,9 @@ class Page
   end
 
   def wait_for_page_loaded(timeout: 30_000)
-    native_page.wait_for_load_state(state: 'load', timeout: timeout) rescue nil
-    native_page.wait_for_load_state(state: 'domcontentloaded', timeout: timeout) rescue nil
-    native_page.wait_for_load_state(state: 'networkidle', timeout: timeout) rescue nil
+    native_page.wait_for_load_state(state: 'networkidle', timeout: timeout)
+  rescue Playwright::TimeoutError
+    puts "Warning: Page load timed out (networkidle), but continuing..."
   end
 end
 
